@@ -14,6 +14,8 @@ import SkillsToLearn from "../components/SkillsToLearn";
 import TechIcon from "../components/TechIcon";
 import SkillsEditor from "../components/SkillsEditor";
 import IssueCard from "../components/IssueCard";
+import { ThemeSegmentedToggle } from "../components/ThemeToggle";
+import { useTheme } from "../hooks/useTheme";
 import JobOpportunitiesList from "../components/JobOpportunitiesList";
 import { hiddenIssueId, useHiddenIssues } from "../hooks/useHiddenIssues";
 import { getMockRecommendedIssues } from "../data/mockIssues";
@@ -46,32 +48,11 @@ import {
   clearRecentSearches,
 } from "../utils/recentSearches";
 import { validateGitHubUsername, resolveAnalyzerErrorMessage } from "../utils/validation";
-import {
-  analyzerReducer,
-  initialAnalyzerState,
-  type AnalyzerData,
-} from "../utils/analyzerState";
+import { analyzerReducer, initialAnalyzerState, type AnalyzerData } from "../utils/analyzerState";
 import BuildVersionBadge from "../components/BuildVersionBadge";
 import ContributorsWall from "../components/ContributorsWall";
 export default function Home() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const savedTheme = localStorage.getItem("theme");
-
-      if (savedTheme === "light" || savedTheme === "dark") {
-        setTheme(savedTheme);
-      }
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem("theme", theme);
-  }, [theme]);
+  const { theme, themePreference, setThemePreference, toggleTheme } = useTheme();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -632,31 +613,20 @@ export default function Home() {
 
               <GitHubLink className="rounded-lg px-2 py-1 transition hover:text-purple-400" />
 
-              <button
-                type="button"
-                onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
-                aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-                aria-pressed={theme === "light"}
-                className={`rounded-xl border px-3.5 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 ${
-                  theme === "dark"
-                    ? "border-white/10 bg-white/5 text-gray-200 hover:bg-white/10"
-                    : "border-gray-300 bg-gray-100 text-gray-800 hover:bg-gray-200"
-                }`}
-              >
-                {theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode"}
-              </button>
+              <ThemeSegmentedToggle
+                preference={themePreference}
+                resolvedTheme={theme}
+                onChangePreference={setThemePreference}
+              />
             </div>
 
             {/* Mobile Hamburger Button */}
             <div className="flex items-center gap-2 md:hidden">
-              <button
-                type="button"
-                onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
-                aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-                className="rounded-xl border border-white/10 bg-white/5 p-2 text-sm"
-              >
-                {theme === "dark" ? "☀️" : "🌙"}
-              </button>
+              <ThemeSegmentedToggle
+                preference={themePreference}
+                resolvedTheme={theme}
+                onChangePreference={setThemePreference}
+              />
 
               <button
                 type="button"
@@ -1539,10 +1509,7 @@ export default function Home() {
                 <JobOpportunitiesList studentSkills={skills?.skills || []} theme={theme} />
 
                 {/* Student Job & Internship Matches */}
-                <JobOpportunitiesList
-                  studentSkills={skills?.skills || []}
-                  theme={theme}
-                />
+                <JobOpportunitiesList studentSkills={skills?.skills || []} theme={theme} />
               </div>
             </section>
           )}
