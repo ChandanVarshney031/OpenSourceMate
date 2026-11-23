@@ -8,6 +8,7 @@ import {
   fetchUserProfile,
   fetchUserSkills,
   fetchMatchedIssues,
+  fetchPrograms,
   fetchHealth,
   searchUser,
   ApiClientError,
@@ -281,6 +282,40 @@ describe("Typed API Client", () => {
       expect(result).toEqual(issues);
       expect(global.fetch).toHaveBeenCalledWith(
         "http://localhost:8000/api/matching/users/octocat/issues?skills=Rust&skills=Go",
+        expect.any(Object)
+      );
+    });
+
+    it("fetchMatchedIssues appends program query parameter when provided", async () => {
+      const issues = { username: "octocat", program: "hacktoberfest", recommendations: [] };
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => issues,
+      });
+
+      const result = await fetchMatchedIssues("octocat", { program: "hacktoberfest" });
+      expect(result).toEqual(issues);
+      expect(global.fetch).toHaveBeenCalledWith(
+        "http://localhost:8000/api/matching/users/octocat/issues?program=hacktoberfest",
+        expect.any(Object)
+      );
+    });
+
+    it("fetchPrograms queries /api/matching/programs", async () => {
+      const programs = {
+        programs: [{ id: "nsoc", name: "NSoC", labels: ["nsoc"], topics: ["nsoc"] }],
+      };
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => programs,
+      });
+
+      const result = await fetchPrograms();
+      expect(result).toEqual(programs);
+      expect(global.fetch).toHaveBeenCalledWith(
+        "http://localhost:8000/api/matching/programs",
         expect.any(Object)
       );
     });
