@@ -7,6 +7,7 @@ All notable changes to OpenSourceMate are recorded here. The format follows
 
 ### Added
 
+- Frontend: Light, Dark, and System theme toggle in the navbar, default system preference detection with OS change listener, synchronous inline blocking script to prevent theme flash (FOUC) on load, persistent choice across reloads, and readable contrast across all components and charts.
 - Frontend: Repository Friendliness Score and badge on recommended issues, computing a deterministic 0–100 score from community signals (CONTRIBUTING guide, Code of Conduct, issue templates, README length, recent merged PRs) with an interactive breakdown popover and client-side caching to respect GitHub rate limits.
 
 - Frontend: Learning mode toggle and target skills picker to recommend and prioritize beginner-friendly issues in skills the user wants to learn next, with dedicated card explanations (#Issue).
