@@ -58,15 +58,8 @@ class Settings(BaseSettings):
     # Maximum number of repository pages to fetch per user analysis.
     github_max_repo_pages: int = 3
 
-    # -------------------------------------------------------------------------
-    # Feature Flags (Issue #339)
-    # Default to False in production for safe gradual rollout of unreleased features.
-    # -------------------------------------------------------------------------
-    feature_pasted_text_analysis: bool = False
-    feature_repository_selection: bool = False
-    feature_starred_repo_interests: bool = False
-    feature_username_autocomplete: bool = False
-    feature_ai_explanations: bool = False
+    # Concurrency limit for parallel repository details & manifest fetching (Issue #337)
+    github_concurrency_limit: int = 5
 
     # Items per page requested from GitHub API (maximum allowed by GitHub is 100).
     github_repos_per_page: int = 100
