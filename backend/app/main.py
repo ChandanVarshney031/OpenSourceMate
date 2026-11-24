@@ -20,6 +20,7 @@ from app.schemas.openapi_serializers import (
 from app.schemas.serializers import (
     HealthDiagnosticsSerializer,
     HealthResponseSerializer,
+    ReadinessResponseSerializer,
 )
 from app.services.github_service import (
     GitHubRateLimitError,
@@ -297,6 +298,12 @@ async def api_version_directory():
 
 
 @app.get(
+    "/health",
+    response_model=HealthResponseSerializer,
+    tags=["Health"],
+    summary="Liveness check (root)",
+)
+@app.get(
     "/api/health",
     response_model=HealthResponseSerializer,
     tags=["Health"],
@@ -327,6 +334,42 @@ async def health_check():
         "service": "OpenSourceMate API",
         "version": "0.1.0",
     }
+
+
+@app.get(
+    "/ready",
+    response_model=ReadinessResponseSerializer,
+    tags=["Health"],
+    summary="Readiness check (root)",
+)
+@app.get(
+    "/api/ready",
+    response_model=ReadinessResponseSerializer,
+    tags=["Health"],
+    summary="Readiness check (api)",
+)
+@app.get(
+    "/api/v1/ready",
+    response_model=ReadinessResponseSerializer,
+    tags=["Health"],
+    summary="Readiness check (v1)",
+)
+async def readiness_check():
+    """Readiness check endpoint that verifies upstream GitHub API reachability within a short timeout (Issue #425).
+
+    Returns HTTP 200 when ready, or HTTP 503 when upstream dependencies are unreachable.
+    """
+    github_info = await get_github_diagnostics()
+    is_ready = bool(github_info.get("reachable", False))
+    payload = {
+        "status": "ready" if is_ready else "not_ready",
+        "service": "OpenSourceMate API",
+        "version": "0.1.0",
+        "github_reachable": is_ready,
+        "details": github_info,
+    }
+    status_code = 200 if is_ready else 503
+    return JSONResponse(status_code=status_code, content=payload)
 
 
 @app.get(

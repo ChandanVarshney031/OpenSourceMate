@@ -61,6 +61,35 @@ class HealthResponseSerializer(BaseModel):
     )
 
 
+class ReadinessResponseSerializer(BaseModel):
+    """Readiness probe response serializer checking upstream dependencies (Issue #425)."""
+
+    status: str = Field(
+        ...,
+        description="Current service readiness status: ready or not_ready",
+        json_schema_extra={"example": "ready"},
+    )
+    service: str = Field(
+        default="OpenSourceMate API",
+        description="Service identifier",
+        json_schema_extra={"example": "OpenSourceMate API"},
+    )
+    version: str = Field(
+        default="0.1.0",
+        description="API version",
+        json_schema_extra={"example": "0.1.0"},
+    )
+    github_reachable: bool = Field(
+        ...,
+        description="Whether upstream GitHub API is reachable within short timeout",
+        json_schema_extra={"example": True},
+    )
+    details: Any = Field(
+        default=None,
+        description="Optional diagnostic or error details",
+    )
+
+
 class HealthDiagnosticsSerializer(BaseModel):
     """Diagnostics payload with upstream service connectivity and cache metrics."""
 

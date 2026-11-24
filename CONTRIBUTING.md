@@ -116,6 +116,26 @@ Prefer not to set up Python and Node.js locally? You can start contributing imme
    git fetch upstream
    ```
 
+---
+
+### One-Command Setup with Docker & Docker Compose
+
+If you have Docker installed, you can start the complete environment (frontend + backend with non-root containers and automated healthchecks) in one command:
+
+```bash
+# Build and start both frontend and backend
+docker compose up --build
+
+# Run in background
+docker compose up -d
+
+# Check health endpoints
+curl http://localhost:8000/health
+curl http://localhost:8000/ready
+```
+
+---
+
 ### 2. Backend Setup (FastAPI)
 
 1. Navigate to the backend directory:
