@@ -42,6 +42,19 @@ export interface UserSkillsResponse {
   analyzed_at?: string;
 }
 
+export interface ContributorProgram {
+  id: string;
+  name: string;
+  description?: string;
+  labels: string[];
+  topics: string[];
+  website?: string;
+}
+
+export interface ProgramsResponse {
+  programs: ContributorProgram[];
+}
+
 export interface IssueRecommendation {
   id: number;
   title: string;
@@ -63,11 +76,14 @@ export interface IssueRecommendation {
   is_mock?: boolean;
   is_learning_mode?: boolean;
   learning_skill?: string;
+  topics?: string[];
+  programs?: string[];
 }
 
 export interface MatchedIssuesResponse {
   username: string;
   skills?: string[];
+  program?: string;
   recommendations: IssueRecommendation[];
   total?: number;
 }

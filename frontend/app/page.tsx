@@ -17,6 +17,8 @@ import IssueCard from "../components/IssueCard";
 import { ThemeSegmentedToggle } from "../components/ThemeToggle";
 import { useTheme } from "../hooks/useTheme";
 import JobOpportunitiesList from "../components/JobOpportunitiesList";
+import ProgramSelector from "../components/ProgramSelector";
+import { issueMatchesProgram } from "../utils/programs";
 import { hiddenIssueId, useHiddenIssues } from "../hooks/useHiddenIssues";
 import { getMockRecommendedIssues } from "../data/mockIssues";
 import { rankIssuesForLearningMode, COMMON_TARGET_SKILLS } from "../utils/learningMode";
@@ -153,6 +155,7 @@ export default function Home() {
   // Filters for recommended issues (Issue #47)
   const [languageFilter, setLanguageFilter] = useState("all");
   const [labelFilter, setLabelFilter] = useState("all");
+  const [selectedProgram, setSelectedProgram] = useState("");
   const [minScoreFilter, setMinScoreFilter] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [showHidden, setShowHidden] = useState(false);
@@ -224,7 +227,8 @@ export default function Home() {
   const fetchMatchedIssues = async (
     targetUsername: string,
     signal?: AbortSignal,
-    overrideSkills?: string[]
+    overrideSkills?: string[],
+    overrideProgram?: string
   ) => {
     setLoadingMatching(true);
     setMatchingError("");
@@ -237,10 +241,13 @@ export default function Home() {
           ? customSkills
           : skills?.skills.map((s) => s.name);
 
+    const programToUse = overrideProgram !== undefined ? overrideProgram : selectedProgram;
+
     try {
       const matchData = await apiFetchMatchedIssues(targetUsername, {
         signal,
         skills: skillsToUse,
+        program: programToUse || undefined,
       });
       if (matchData.recommendations && matchData.recommendations.length > 0) {
         setRecommendations(matchData.recommendations);
@@ -252,6 +259,7 @@ export default function Home() {
       } else {
         const fallback = getMockRecommendedIssues(skillsToUse, {
           filterBySkills: customSkills !== null || overrideSkills !== undefined,
+          program: programToUse || undefined,
         });
         setRecommendations(fallback);
         setIsDemoData(true);
@@ -264,12 +272,21 @@ export default function Home() {
       } else {
         const fallback = getMockRecommendedIssues(skillsToUse, {
           filterBySkills: customSkills !== null || overrideSkills !== undefined,
+          program: programToUse || undefined,
         });
         setRecommendations(fallback);
         setIsDemoData(true);
       }
     } finally {
       setLoadingMatching(false);
+    }
+  };
+
+  const handleProgramChange = (newProgram: string) => {
+    setSelectedProgram(newProgram);
+    const target = profile?.username || username;
+    if (target) {
+      fetchMatchedIssues(target, undefined, undefined, newProgram);
     }
   };
 
@@ -334,6 +351,10 @@ export default function Home() {
         if (!hasHW) return false;
       }
 
+      if (selectedProgram) {
+        if (!issueMatchesProgram(rec, selectedProgram)) return false;
+      }
+
       const score = rec.match_score ?? rec.score ?? 0;
       if (score < minScoreFilter) {
         return false;
@@ -354,6 +375,7 @@ export default function Home() {
     showHidden,
     languageFilter,
     labelFilter,
+    selectedProgram,
     minScoreFilter,
     searchQuery,
   ]);
@@ -361,6 +383,7 @@ export default function Home() {
   const hasActiveFilters =
     languageFilter !== "all" ||
     labelFilter !== "all" ||
+    selectedProgram !== "" ||
     minScoreFilter > 0 ||
     searchQuery.trim().length > 0;
 
@@ -369,6 +392,7 @@ export default function Home() {
     setLabelFilter("all");
     setMinScoreFilter(0);
     setSearchQuery("");
+    handleProgramChange("");
   };
 
   const analyzeProfile = async (override?: string) => {
@@ -1301,7 +1325,7 @@ export default function Home() {
                           : "border-gray-200 bg-gray-50/50"
                       }`}
                     >
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                         {/* Search input filter */}
                         <div>
                           <label
@@ -1350,6 +1374,14 @@ export default function Home() {
                             ))}
                           </select>
                         </div>
+
+                        {/* Contributor Program selector */}
+                        <ProgramSelector
+                          value={selectedProgram}
+                          onChange={handleProgramChange}
+                          theme={theme}
+                          showBadge={false}
+                        />
 
                         {/* Label type filter dropdown */}
                         <div>

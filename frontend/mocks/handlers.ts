@@ -2,6 +2,7 @@ import { generateMockUserProfile } from "./fixtures/users";
 import { generateMockSkills } from "./fixtures/skills";
 import { generateMockRepositories } from "./fixtures/repositories";
 import { generateMockMatchedIssues } from "./fixtures/issues";
+import { getProgramsConfig } from "../utils/programs";
 
 export interface MockRequest {
   url: string;
@@ -128,6 +129,7 @@ export function handleMockApiRequest(url: string, method?: string): MockResponse
     if (mockCheck) return mockCheck;
 
     const skillsParams = urlObj.searchParams.getAll("skills");
+    const programParam = urlObj.searchParams.get("program") || undefined;
     let explicitSkills: string[] | undefined = undefined;
 
     if (skillsParams.length > 0 || urlObj.searchParams.has("skills")) {
@@ -152,11 +154,25 @@ export function handleMockApiRequest(url: string, method?: string): MockResponse
       }
     }
 
-    const issues = generateMockMatchedIssues(rawUsername, explicitSkills);
+    const issues = generateMockMatchedIssues(rawUsername, explicitSkills, programParam);
     return {
       status: 200,
       headers: { "Content-Type": "application/json" },
       body: issues,
+    };
+  }
+
+  // 6. Contributor Programs: /api/matching/programs or /api/programs
+  if (
+    pathname === "/api/matching/programs" ||
+    pathname === "/api/programs" ||
+    pathname === "/api/v1/programs" ||
+    pathname === "/api/v1/matching/programs"
+  ) {
+    return {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+      body: { programs: getProgramsConfig() },
     };
   }
 

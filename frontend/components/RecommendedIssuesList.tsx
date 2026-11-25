@@ -6,6 +6,8 @@ import IssueCard from "./IssueCard";
 import { inferIssueDifficulty, type IssueDifficulty } from "../data/mockIssues";
 import { hiddenIssueId, useHiddenIssues } from "../hooks/useHiddenIssues";
 import { rankIssuesForLearningMode, COMMON_TARGET_SKILLS } from "../utils/learningMode";
+import { issueMatchesProgram } from "../utils/programs";
+import ProgramSelector from "./ProgramSelector";
 
 export interface RecommendedIssuesListProps {
   issues: IssueRecommendation[];
@@ -14,6 +16,8 @@ export interface RecommendedIssuesListProps {
   username?: string;
   initialLearningMode?: boolean;
   initialTargetSkills?: string[];
+  selectedProgram?: string;
+  onProgramChange?: (programId: string) => void;
 }
 
 export default function RecommendedIssuesList({
@@ -23,6 +27,8 @@ export default function RecommendedIssuesList({
   username = "",
   initialLearningMode = false,
   initialTargetSkills = [],
+  selectedProgram,
+  onProgramChange,
 }: RecommendedIssuesListProps) {
   const isDark = theme === "dark";
 
@@ -37,6 +43,13 @@ export default function RecommendedIssuesList({
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
   const [minScoreFilter, setMinScoreFilter] = useState(0);
   const [showHidden, setShowHidden] = useState(false);
+  const [internalProgram, setInternalProgram] = useState<string>(selectedProgram || "");
+  const activeProgram = selectedProgram !== undefined ? selectedProgram : internalProgram;
+
+  const handleProgramSelect = (prog: string) => {
+    setInternalProgram(prog);
+    onProgramChange?.(prog);
+  };
   const { hiddenIds, isHidden, hideIssue, restoreIssue } = useHiddenIssues();
   const hiddenCount = issues.filter((issue) => hiddenIds.includes(hiddenIssueId(issue))).length;
 
@@ -92,6 +105,13 @@ export default function RecommendedIssuesList({
         }
       }
 
+      // Program filter
+      if (activeProgram) {
+        if (!issueMatchesProgram(issue, activeProgram)) {
+          return false;
+        }
+      }
+
       // Score filter
       const score = Math.round(issue.match_score ?? issue.score ?? 0);
       if (score < minScoreFilter) {
@@ -115,11 +135,13 @@ export default function RecommendedIssuesList({
     languageFilter,
     labelFilter,
     difficultyFilter,
+    activeProgram,
     minScoreFilter,
     searchQuery,
   ]);
 
   const hasActiveFilters =
+    activeProgram !== "" ||
     languageFilter !== "all" ||
     labelFilter !== "all" ||
     difficultyFilter !== "all" ||
@@ -127,6 +149,7 @@ export default function RecommendedIssuesList({
     searchQuery.trim().length > 0;
 
   const resetFilters = () => {
+    handleProgramSelect("");
     setLanguageFilter("all");
     setLabelFilter("all");
     setDifficultyFilter("all");
@@ -335,7 +358,7 @@ export default function RecommendedIssuesList({
             isDark ? "border-white/5 bg-white/[0.02]" : "border-gray-200 bg-gray-50/50"
           }`}
         >
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {/* Search filter */}
             <div className="lg:col-span-1">
               <label
@@ -386,6 +409,14 @@ export default function RecommendedIssuesList({
                 ))}
               </select>
             </div>
+
+            {/* Program selector */}
+            <ProgramSelector
+              value={activeProgram}
+              onChange={handleProgramSelect}
+              theme={theme}
+              showBadge={false}
+            />
 
             {/* Difficulty filter */}
             <div>

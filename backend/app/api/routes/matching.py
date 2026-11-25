@@ -12,6 +12,11 @@ from app.services.github_service import (
 )
 from app.services.issue_service import search_github_issues
 from app.services.matching_service import build_idf, calculate_issue_score
+from app.services.program_service import (
+    get_all_programs,
+    get_program_by_id_or_name,
+    issue_matches_program,
+)
 from app.services.skill_service import analyze_skills
 from app.utils.validation import is_valid_skill, validate_github_username
 
@@ -22,6 +27,14 @@ router = APIRouter(
 
 ATOM_NS = "http://www.w3.org/2005/Atom"
 ElementTree.register_namespace("", ATOM_NS)
+
+
+@router.get("/programs", summary="List supported contributor programs (NSoC, Hacktoberfest, etc.)")
+async def list_contributor_programs():
+    """Returns the list of supported contributor programs from config."""
+    return {
+        "programs": get_all_programs(),
+    }
 
 
 def _atom_date(value: str | None) -> str:
@@ -44,8 +57,19 @@ async def get_matched_issues(
     username: str,
     exclude_stale: bool = Query(default=False),
     skills: list[str] | None = Query(default=None),
+    program: str | None = Query(default=None),
 ):
     validated_username = validate_github_username(username)
+
+    program_config: dict[str, Any] | None = None
+    if program is not None and program.strip() and program.strip().lower() not in ("all", "none"):
+        program_config = get_program_by_id_or_name(program)
+        if not program_config:
+            available = ", ".join(p.get("id", "") for p in get_all_programs())
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid program: '{program}'. Available programs: {available}",
+            )
 
     explicit_skills: list[str] | None = None
     if skills is not None:
@@ -123,6 +147,19 @@ async def get_matched_issues(
 
             found_issues.extend(result["issues"])
 
+            # If program filter is active, also search issues tagged with program labels
+            if program_config:
+                for p_lbl in program_config.get("labels", [])[:2]:
+                    try:
+                        p_result = await search_github_issues(
+                            language=skill,
+                            label=p_lbl,
+                            per_page=10,
+                        )
+                        found_issues.extend(p_result["issues"])
+                    except Exception:
+                        continue
+
         except GitHubRateLimitError:
             # Every remaining search would fail too, so tell the caller.
             raise
@@ -144,6 +181,14 @@ async def get_matched_issues(
                 for lbl in iss.get("labels", [])
             )
             or any(s in (iss.get("title") or "").lower() for s in user_skills_lower)
+        ]
+
+    # Filter by selected program: only retain issues carrying its labels or repository topics
+    if program_config is not None:
+        found_issues = [
+            iss
+            for iss in found_issues
+            if issue_matches_program(iss, program_config)
         ]
 
     # IDF is computed over everything fetched, so a skill that every
@@ -208,11 +253,15 @@ async def get_matched_issues(
         issue["is_ai_generated"] = explanation_data["is_ai_generated"]
         issue["why_it_matches"] = explanation_data["explanation"]
 
-    return {
+    response_data: dict[str, Any] = {
         "username": validated_username,
         "skills": user_skills,
         "recommendations": top_recommendations,
     }
+    if program_config:
+        response_data["program"] = program_config["id"]
+
+    return response_data
 
 
 @router.get("/users/{username}/feed.atom", response_class=Response)
@@ -220,9 +269,10 @@ async def get_matched_issues_feed(
     username: str,
     request: Request,
     skills: list[str] | None = Query(default=None),
+    program: str | None = Query(default=None),
 ) -> Response:
     """Expose the same ranked matches as an Atom feed for feed readers."""
-    matches = await get_matched_issues(username, exclude_stale=False, skills=skills)
+    matches = await get_matched_issues(username, exclude_stale=False, skills=skills, program=program)
     recommendations = matches["recommendations"]
     feed = ElementTree.Element(f"{{{ATOM_NS}}}feed")
     _atom_element(feed, "id", str(request.url))

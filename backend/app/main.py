@@ -411,6 +411,13 @@ async def health_diagnostics():
     }
 
 
+@app.get("/api/programs", tags=["Matching"], summary="List contributor programs")
+@app.get("/api/v1/programs", tags=["Matching"], summary="List contributor programs (v1)")
+async def get_programs_shortcut():
+    from app.services.program_service import get_all_programs
+    return {"programs": get_all_programs()}
+
+
 # ---------------------------------------------------------
 # Routers (Dual-mounted: /api/ and /api/v1/ for compatibility)
 # ---------------------------------------------------------

@@ -11,6 +11,7 @@ import {
   type HealthResponse,
   type ApiErrorResponse,
   type CompleteAnalysisResult,
+  type ProgramsResponse,
 } from "../types/api";
 
 export interface RequestOptions extends RequestInit {
@@ -288,11 +289,13 @@ export async function fetchUserSkills(
 
 export interface FetchMatchedIssuesOptions extends RequestOptions {
   skills?: string[];
+  program?: string;
 }
 
 /**
  * Fetches open-source issue recommendations matching a user's skills.
- * Optionally accepts an explicit skills array to customize matched technologies.
+ * Optionally accepts an explicit skills array to customize matched technologies,
+ * and a program identifier to filter for program-specific issues (e.g. NSoC, Hacktoberfest).
  */
 export async function fetchMatchedIssues(
   username: string,
@@ -307,11 +310,21 @@ export async function fetchMatchedIssues(
       options.skills.forEach((s) => query.append("skills", s));
     }
   }
+  if (options?.program) {
+    query.append("program", options.program);
+  }
   const queryString = query.toString() ? `?${query.toString()}` : "";
   return typedRequest<MatchedIssuesResponse>(
     `/api/matching/users/${clean}/issues${queryString}`,
     options
   );
+}
+
+/**
+ * Fetches supported contributor programs configuration.
+ */
+export async function fetchPrograms(options?: RequestOptions): Promise<ProgramsResponse> {
+  return typedRequest<ProgramsResponse>("/api/matching/programs", options);
 }
 
 /**

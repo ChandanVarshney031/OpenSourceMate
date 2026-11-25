@@ -189,4 +189,32 @@ describe("RecommendedIssuesList Component", () => {
     const restoredCards = screen.getAllByRole("article");
     expect(restoredCards[0]).toHaveTextContent("vercel/next.js");
   });
+
+  it("filters recommendations by selected contributor program", () => {
+    const handleProgramChange = jest.fn();
+    render(
+      <RecommendedIssuesList
+        issues={MOCK_RECOMMENDED_ISSUES}
+        onProgramChange={handleProgramChange}
+      />
+    );
+
+    const programSelect = screen.getByTestId("program-filter-select");
+    expect(programSelect).toBeInTheDocument();
+
+    // Select Hacktoberfest
+    fireEvent.change(programSelect, { target: { value: "hacktoberfest" } });
+    expect(handleProgramChange).toHaveBeenCalledWith("hacktoberfest");
+
+    // All displayed cards should carry Hacktoberfest
+    const filteredCards = screen.getAllByRole("article");
+    expect(filteredCards.length).toBeGreaterThan(0);
+    filteredCards.forEach((card) => {
+      expect(card).toHaveTextContent(/hacktoberfest/i);
+    });
+
+    // Resetting to All Programs restores all issues
+    fireEvent.change(programSelect, { target: { value: "" } });
+    expect(screen.getAllByRole("article")).toHaveLength(MOCK_RECOMMENDED_ISSUES.length);
+  });
 });

@@ -1,4 +1,5 @@
 import type { MatchedIssuesResponse } from "../../types/api";
+import { filterIssuesByProgram } from "../../utils/programs";
 
 export const MOCK_MATCHED_ISSUES: Record<string, MatchedIssuesResponse> = {
   octocat: {
@@ -11,7 +12,8 @@ export const MOCK_MATCHED_ISSUES: Record<string, MatchedIssuesResponse> = {
         repository: "github/docs",
         url: "https://github.com/github/docs/issues/201",
         state: "open",
-        labels: ["good first issue", "accessibility", "frontend"],
+        labels: ["good first issue", "accessibility", "frontend", "hacktoberfest"],
+        topics: ["hacktoberfest"],
         comments: 3,
         created_at: "2026-10-14T09:00:00Z",
         updated_at: "2026-10-25T11:20:00Z",
@@ -28,7 +30,8 @@ export const MOCK_MATCHED_ISSUES: Record<string, MatchedIssuesResponse> = {
         repository: "rails/rails",
         url: "https://github.com/rails/rails/issues/202",
         state: "open",
-        labels: ["activerecord", "help wanted"],
+        labels: ["activerecord", "help wanted", "nsoc"],
+        topics: ["nsoc", "nwoc"],
         comments: 14,
         created_at: "2026-10-10T14:15:00Z",
         updated_at: "2026-10-29T16:45:00Z",
@@ -51,7 +54,8 @@ export const MOCK_MATCHED_ISSUES: Record<string, MatchedIssuesResponse> = {
         repository: "torvalds/linux",
         url: "https://github.com/torvalds/linux/issues/301",
         state: "open",
-        labels: ["arch/x86", "performance", "kernel"],
+        labels: ["arch/x86", "performance", "kernel", "gsoc"],
+        topics: ["gsoc"],
         comments: 26,
         created_at: "2026-09-18T10:00:00Z",
         updated_at: "2026-10-30T12:00:00Z",
@@ -84,7 +88,8 @@ export function generateMockMatchedIssues(
         repository: "vercel/next.js",
         url: "https://github.com/vercel/next.js/issues/101",
         state: "open",
-        labels: ["good first issue", "typescript"],
+        labels: ["good first issue", "typescript", "hacktoberfest"],
+        topics: ["hacktoberfest"],
         comments: 2,
         created_at: "2026-10-12T10:00:00Z",
         updated_at: "2026-10-20T14:00:00Z",
@@ -100,7 +105,8 @@ export function generateMockMatchedIssues(
         repository: "tiangolo/fastapi",
         url: "https://github.com/tiangolo/fastapi/issues/102",
         state: "open",
-        labels: ["help wanted", "enhancement"],
+        labels: ["help wanted", "enhancement", "nsoc"],
+        topics: ["nsoc", "nwoc"],
         comments: 6,
         created_at: "2026-10-15T11:00:00Z",
         updated_at: "2026-10-26T16:30:00Z",
@@ -116,7 +122,8 @@ export function generateMockMatchedIssues(
         repository: "BurntSushi/ripgrep",
         url: "https://github.com/BurntSushi/ripgrep/issues/103",
         state: "open",
-        labels: ["good first issue", "rust"],
+        labels: ["good first issue", "rust", "gsoc"],
+        topics: ["gsoc"],
         comments: 2,
         created_at: "2026-10-18T10:00:00Z",
         updated_at: "2026-10-28T14:00:00Z",
@@ -130,18 +137,22 @@ export function generateMockMatchedIssues(
     total: 3,
   };
 
+  let recs = baseData.recommendations;
+  let activeSkills = baseData.skills;
+
   if (explicitSkills !== undefined) {
     if (explicitSkills.length === 0) {
       return {
         username,
         skills: [],
+        program,
         recommendations: [],
         total: 0,
       };
     }
 
     const explicitLower = new Set(explicitSkills.map((s) => s.toLowerCase().trim()));
-    const filteredRecs = baseData.recommendations.filter((rec) => {
+    recs = recs.filter((rec) => {
       const langMatch = rec.language && explicitLower.has(rec.language.toLowerCase());
       const labelMatch = rec.labels?.some((lbl) => explicitLower.has(lbl.toLowerCase()));
       const titleMatch = explicitSkills.some((s) =>
@@ -149,14 +160,18 @@ export function generateMockMatchedIssues(
       );
       return langMatch || labelMatch || titleMatch;
     });
-
-    return {
-      username,
-      skills: explicitSkills,
-      recommendations: filteredRecs,
-      total: filteredRecs.length,
-    };
+    activeSkills = explicitSkills;
   }
 
-  return baseData;
+  if (program) {
+    recs = filterIssuesByProgram(recs, program);
+  }
+
+  return {
+    username,
+    skills: activeSkills,
+    program,
+    recommendations: recs,
+    total: recs.length,
+  };
 }
