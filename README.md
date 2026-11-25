@@ -205,6 +205,24 @@ You can develop OpenSourceMate entirely in your browser or through VS Code with 
 
 ---
 
+### Develop with Docker (One Command)
+
+You can run both the frontend and backend with a single command using Docker and Docker Compose with zero local toolchain dependencies:
+
+```bash
+docker compose up --build
+```
+
+- **Frontend**: `http://localhost:3000`
+- **Backend API**: `http://localhost:8000`
+- **Health check (Liveness)**: `http://localhost:8000/health`
+- **Readiness check (Upstream GitHub)**: `http://localhost:8000/ready`
+- **Interactive OpenAPI docs**: `http://localhost:8000/docs`
+
+Containers run safely as non-root users and automatically wire environment variables from `.env.example`.
+
+---
+
 ### Prerequisites
 
 Make sure you have the following installed:
