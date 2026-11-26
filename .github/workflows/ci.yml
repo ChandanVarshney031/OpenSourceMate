@@ -110,6 +110,9 @@ jobs:
       - name: Run tests with coverage
         run: python -m pytest -v --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov --cov-fail-under=80
 
+      - name: Run Schemathesis API contract tests
+        run: python -m pytest -v tests/test_schemathesis_contract.py
+
       - name: Report Backend Coverage Summary
         if: always()
         run: |
