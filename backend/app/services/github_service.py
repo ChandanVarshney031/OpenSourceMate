@@ -10,6 +10,7 @@ import httpx
 
 from app.cache import TTLCache, cache
 from app.config import get_settings
+from app.services.metrics_service import get_metrics_collector
 from app.utils.logging import get_logger, sanitize_sensitive_data
 
 logger = get_logger("app.services.github")
@@ -144,6 +145,7 @@ async def github_get(
         request_headers["If-None-Match"] = etag_val
 
     for attempt in range(1, max_retries + 1):
+        call_start = time.perf_counter()
         try:
             logger.debug(
                 f"Calling external GitHub API: {url} (attempt {attempt}/{max_retries})",
@@ -162,6 +164,29 @@ async def github_get(
                 url,
                 params=params,
                 headers=request_headers if request_headers else None,
+            )
+            call_duration_ms = round((time.perf_counter() - call_start) * 1000, 2)
+            remaining_header = response.headers.get("X-RateLimit-Remaining")
+            remaining_val = int(remaining_header) if remaining_header and remaining_header.isdigit() else None
+
+            # Log GitHub response summary including duration and rate limit remaining
+            logger.info(
+                f"GitHub API {response.status_code} on {url} in {call_duration_ms}ms (remaining rate limit: {remaining_header})",
+                extra={
+                    "structured_data": {
+                        "event": "github_api_response",
+                        "url": url,
+                        "status_code": response.status_code,
+                        "duration_ms": call_duration_ms,
+                        "rate_limit_remaining": remaining_val,
+                    }
+                },
+            )
+
+            # Record call in metrics collector
+            get_metrics_collector().record_github_call(
+                duration_ms=call_duration_ms,
+                remaining_rate_limit=remaining_val,
             )
 
             # Handle 304 Not Modified: GitHub rate limit was NOT consumed!
@@ -200,6 +225,11 @@ async def github_get(
 
             # Check rate limiting first
             if _is_rate_limited(response):
+                get_metrics_collector().record_github_call(
+                    duration_ms=call_duration_ms,
+                    remaining_rate_limit=0,
+                    error_type="rate_limit",
+                )
                 logger.warning(
                     f"GitHub API rate limit exceeded on {url}",
                     extra={
@@ -250,6 +280,10 @@ async def github_get(
                             }
                         },
                     )
+                    get_metrics_collector().record_github_call(
+                        duration_ms=round((time.perf_counter() - call_start) * 1000, 2),
+                        error_type="upstream_5xx",
+                    )
                     raise GitHubUpstreamError(url, response.status_code, response.text)
 
             return response
@@ -269,6 +303,10 @@ async def github_get(
                 delay = backoff_factor * (2 ** (attempt - 1))
                 await asyncio.sleep(delay)
                 continue
+            get_metrics_collector().record_github_call(
+                duration_ms=round((time.perf_counter() - call_start) * 1000, 2),
+                error_type="timeout",
+            )
             raise GitHubTimeoutError(url, settings.github_read_timeout) from exc
 
         except httpx.NetworkError as exc:
