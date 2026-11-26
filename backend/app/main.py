@@ -2,15 +2,17 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.routes.ai import router as ai_router
+from app.api.routes.friendliness import router as friendliness_router
 from app.api.routes.github import router as github_router
 from app.api.routes.issues import router as issues_router
 from app.api.routes.matching import router as matching_router
-from app.api.routes.friendliness import router as friendliness_router
 from app.api.routes.text_skills import router as text_skills_router
 from app.config import get_settings
 from app.exceptions import APIException
@@ -30,7 +32,6 @@ from app.services.github_service import (
     close_client,
     get_github_diagnostics,
 )
-from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 
 @asynccontextmanager
@@ -184,15 +185,31 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     )
 
 
+def sanitize_validation_errors(obj: Any) -> Any:
+    """Recursively sanitize validation error structures, converting non-UTF8 bytes to safe strings."""
+    if isinstance(obj, bytes):
+        return obj.decode("utf-8", errors="replace")
+    if isinstance(obj, dict):
+        return {k: sanitize_validation_errors(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [sanitize_validation_errors(v) for v in obj]
+    return obj
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    raw_errors = exc.errors()
+    safe_errors = jsonable_encoder(sanitize_validation_errors(raw_errors))
     return JSONResponse(
         status_code=422,
-        content=format_error_content(
-            code="VALIDATION_ERROR",
-            message="Request validation failed.",
-            details=exc.errors(),
-        ),
+        content={
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Request validation failed.",
+                "details": safe_errors,
+            },
+            "detail": safe_errors,
+        },
     )
 
 
@@ -412,9 +429,12 @@ async def health_diagnostics():
 
 
 @app.get("/api/programs", tags=["Matching"], summary="List contributor programs")
-@app.get("/api/v1/programs", tags=["Matching"], summary="List contributor programs (v1)")
+@app.get(
+    "/api/v1/programs", tags=["Matching"], summary="List contributor programs (v1)"
+)
 async def get_programs_shortcut():
     from app.services.program_service import get_all_programs
+
     return {"programs": get_all_programs()}
 
 

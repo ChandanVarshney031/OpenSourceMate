@@ -336,6 +336,8 @@ http://localhost:8000
 
 Interactive OpenAPI documentation (Swagger UI) is accessible at `http://localhost:8000/docs`.
 
+For automated schema-based property testing, see [API Contract Testing with Schemathesis](docs/schemathesis-api-contract-testing.md).
+
 For curl, Python and JavaScript examples of every endpoint, plus a Bruno request collection, see [API Usage Examples](docs/api-usage-examples.md).
 
 ### Run the backend tests
@@ -345,6 +347,12 @@ The tests mock the GitHub API, so no network or token is needed.
 ```bash
 pip install -r requirements-dev.txt
 pytest --cov=app --cov-report=term-missing
+```
+
+Run property-based OpenAPI contract tests:
+
+```bash
+pytest tests/test_schemathesis_contract.py -v
 ```
 
 A minimum 80% coverage threshold is enforced by CI.
