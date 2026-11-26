@@ -434,6 +434,16 @@ Common error codes:
 
 ---
 
+## ⚡ Performance & Bundle Budgets (Issue #454)
+
+Continuous integration runs automated checks to protect application performance and prevent silent bundle bloat:
+
+- **Lighthouse CI**: Audits performance, accessibility, and best practices for the homepage and results view (`frontend/lighthouserc.json`).
+- **JavaScript Bundle Size Check**: Fails the build if any page's generated script payload exceeds the size threshold configured in `frontend/bundle-budget.json`.
+- **Updating Budgets**: See [docs/PERFORMANCE_BUDGETS.md](docs/PERFORMANCE_BUDGETS.md) for how to run audits locally and update budgets.
+
+---
+
 ## Environment Variables
 
 OpenSourceMate uses environment variables to configure the Next.js frontend and FastAPI backend.
