@@ -86,6 +86,8 @@ export interface MatchedIssuesResponse {
   program?: string;
   recommendations: IssueRecommendation[];
   total?: number;
+  next_cursor?: number | null;
+  limit?: number;
 }
 
 export interface RepositoryItem {
